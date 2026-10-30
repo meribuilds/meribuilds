@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>reelcut</title>
+<meta name="description" content="Cut a vlog by its transcript, add a hook and captions, preview it in a phone frame, render it in the browser.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&family=Fredoka:wght@500;700&family=Nunito:wght@700;800;900&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">reelcut<b>.</b></div>
+  <span class="chip">studio</span>
+  <input id="projectName" class="project-name" type="text" value="untitled-reel" aria-label="Project name" spellcheck="false">
+  <div class="spacer"></div>
+  <div class="seg" role="group" aria-label="Theme">
+    <button id="themeDark" aria-pressed="false">Dark</button>
+    <button id="themeLight" aria-pressed="true">Light</button>
+  </div>
+  <div class="pill-select"><label for="versionSel">Version</label><select id="versionSel"><option value="">draft</option></select></div>
+  <div class="pill-select"><label for="pausesSel" class="visually-hidden">Pauses</label>
+    <select id="pausesSel">
+      <option value="none">Keep pauses</option>
+      <option value="tight" selected>Tight pauses</option>
+      <option value="tighter">Tighter pauses</option>
+    </select>
+  </div>
+  <div class="seg" role="group" aria-label="History">
+    <button id="undoBtn" title="Undo (Ctrl+Z)">↶</button>
+    <button id="redoBtn" title="Redo (Ctrl+Shift+Z)">↷</button>
+  </div>
+  <span id="saveStatus" class="status">saved</span>
+  <button id="renderBtn" class="btn primary">Render cut</button>
+</header>
+
+<main class="main">
+  <section class="preview-wrap">
+    <div class="preview-tools">
+      <button id="igToggle" class="toggle" aria-pressed="true">Instagram UI</button>
+      <button id="safeToggle" class="toggle" aria-pressed="false">Safe zones</button>
+      <span class="spacer"></span>
+      <span id="fileLabel" class="file-label">no video yet</span>
+    </div>
+    <div class="stage">
+      <div class="phone" id="phone">
+        <div class="screen">
+          <video id="video" playsinline preload="auto" crossorigin="anonymous"></video>
+          <div class="empty" id="emptyState"><div><b>Drop a vlog here</b>or use Workflow → Add video. Nothing leaves your browser.</div></div>
+          <div class="overlay" id="overlay">
+            <div class="hook abie" id="hookEl" hidden><div class="small"></div><div class="big"></div><div class="sub"></div></div>
+            <div class="cap abie2" id="capEl" hidden></div>
+            <div id="stickerLayer"></div>
+          </div>
+          <div class="safe" id="safeEl" hidden></div>
+          <div class="ig" id="igEl">
+            <div class="top"><span>9:41</span><span>▮▮▮ ◉</span></div>
+            <div class="reels">Reels ⌄</div>
+            <div class="rail"><div><i class="heart"></i>12.4K</div><div><i></i>318</div><div><i class="send"></i>1.2K</div><div><i></i></div></div>
+            <div class="meta"><div class="user"><span id="igUser">yourhandle</span><em>Follow</em></div><div id="igCaption">first client pitch in Valencia ~ what I learned</div><div>♫ Original audio</div></div>
+            <div class="bar"><i></i><i></i><i></i><i></i><i></i></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="transport">
+      <button id="playBtn" class="btn dark">▶ Play cut</button>
+      <button id="restartBtn" class="btn sm">⟲ Start</button>
+      <span class="time"><span id="tCur">0:00.0</span> / <span id="tTotal">0:00.0</span></span>
+      <label class="switch" style="margin-left:8px"><input id="muteChk" type="checkbox"><span class="help">mute preview</span></label>
+    </div>
+  </section>
+
+  <aside class="panel">
+    <div class="tabs" role="tablist">
+      <button role="tab" aria-selected="true" data-tab="style">Style</button>
+      <button role="tab" aria-selected="false" data-tab="stickers">Stickers</button>
+      <button role="tab" aria-selected="false" data-tab="words">Words</button>
+      <button role="tab" aria-selected="false" data-tab="workflow">Workflow</button>
+    </div>
+
+    <div class="tab" data-tab="style">
+      <div class="note">Captions and hook play over the video ~ drag them to move</div>
+      <div class="group">
+        <h3>Hook</h3>
+        <div class="row"><label for="hookOn">Hook</label><label class="switch"><input id="hookOn" type="checkbox" checked><span>Big title at the start</span></label></div>
+        <div class="row"><label for="hookStyle">Hook style</label><select id="hookStyle"><option value="abie">Bubbly hook</option><option value="editorial">Editorial hook</option><option value="clean">Clean label</option></select></div>
+        <div class="row"><label for="hookShow">Show hook</label><select id="hookShow"><option value="whole">The whole video</option><option value="3">First 3 seconds</option><option value="5">First 5 seconds</option><option value="first">During the first clip</option></select></div>
+        <div class="row"><label for="hookSmall">Small line</label><input id="hookSmall" type="text" placeholder="pitching to my"></div>
+        <div class="row"><label for="hookBig">Big line</label><input id="hookBig" type="text" placeholder="first client"></div>
+        <div class="row"><label for="hookSub">Subtitle</label><input id="hookSub" type="text" placeholder="Editorial hook only, e.g. how i scored it"></div>
+        <div class="row"><label for="hookSize">Size</label><input id="hookSize" type="range" min="0.6" max="1.6" step="0.05" value="1"></div>
+        <p class="help">Leave lines blank to use your first sentence. Captions start after a timed hook.</p>
+      </div>
+      <div class="group">
+        <h3>Captions</h3>
+        <div class="row"><label for="capOn">Captions</label><label class="switch"><input id="capOn" type="checkbox" checked><span>Word-by-word captions</span></label></div>
+        <div class="row"><label for="capTemplate">Template</label><select id="capTemplate"><option value="abie2">Pink highlight</option><option value="yellow">Yellow highlight</option><option value="box">Dark box</option></select></div>
+        <div class="row"><label for="capWords">Words at once</label><select id="capWords"><option value="2">2</option><option value="3">3</option><option value="4" selected>4</option><option value="5">5</option></select></div>
+        <div class="row"><label for="capSize">Size</label><input id="capSize" type="range" min="0.6" max="1.6" step="0.05" value="1"></div>
+        <div class="row"><label for="capCase">Case</label><select id="capCase"><option value="as-is">As spoken</option><option value="upper">UPPERCASE</option><option value="lower">lowercase</option></select></div>
+      </div>
+      <div class="group">
+        <h3>Instagram preview</h3>
+        <div class="row"><label for="igUserIn">Handle</label><input id="igUserIn" type="text" value="yourhandle"></div>
+        <div class="row"><label for="igCapIn">Post caption</label><input id="igCapIn" type="text" value="first client pitch in Valencia ~ what I learned"></div>
+      </div>
+    </div>
+
+    <div class="tab" data-tab="stickers" hidden>
+      <div class="note">Stickers sit on top of the cut. Drag them in the preview, set when they show.</div>
+      <div class="group">
+        <h3>Add a sticker</h3>
+        <div class="row"><label for="stkEmoji">Emoji / text</label><input id="stkEmoji" type="text" placeholder="✨ or a short word"></div>
+        <div class="row"><label for="stkImg">Image</label><input id="stkImg" type="file" accept="image/*"></div>
+        <div class="row"><label for="stkStart">Show from</label><input id="stkStart" type="number" min="0" step="0.1" value="0"> </div>
+        <div class="row"><label for="stkEnd">Until</label><input id="stkEnd" type="number" min="0" step="0.1" value="3"></div>
+        <div class="inline"><button id="stkAdd" class="btn primary">Add sticker</button><span class="help">times are in cut seconds</span></div>
+      </div>
+      <div class="group"><h3>On the cut</h3><div id="stkList" class="cards"></div></div>
+    </div>
+
+    <div class="tab" data-tab="words" hidden>
+      <div class="cards-head"><h2>In the cut</h2><span class="mono" id="cutSummary">0 phrases · ≈0s</span></div>
+      <p class="help">Tick a phrase to keep it. Click a word to cut it out. Arrows reorder. Rotate fixes clips shot upside down.</p>
+      <div class="inline">
+        <button id="keepAll" class="btn sm">Keep all</button>
+        <button id="dropAll" class="btn sm">Drop all</button>
+        <button id="dropFillers" class="btn sm">Cut filler words</button>
+      </div>
+      <div id="cards" class="cards"><div class="empty-cards">Add a video and a transcript in Workflow to see phrases here.</div></div>
+    </div>
+
+    <div class="tab" data-tab="workflow" hidden>
+      <div class="steps">
+        <div class="step">
+          <h4><span class="n">01</span> Add video</h4>
+          <label class="drop" id="videoDrop"><input id="videoFile" type="file" accept="video/*"><strong>Choose a video</strong> or drop it anywhere on the phone. MP4 or MOV from your phone works.</label>
+          <div id="videoInfo" class="help"></div>
+        </div>
+        <div class="step">
+          <h4><span class="n">02</span> Get the transcript</h4>
+          <div class="help">Pick one. Word timings make the cut precise.</div>
+          <div class="key-row"><input id="apiKey" type="password" placeholder="OpenAI API key (stays in this browser)" autocomplete="off"><button id="transcribeApi" class="btn primary">Transcribe</button></div>
+          <div class="inline"><button id="transcribeLocal" class="btn">Transcribe in browser (free, slower)</button>
+            <select id="localModel" aria-label="Local model"><option value="onnx-community/whisper-tiny.en">tiny · fastest</option><option value="onnx-community/whisper-base.en">base · better</option><option value="onnx-community/whisper-small.en">small · best</option></select></div>
+          <label class="drop" id="srtDrop"><input id="srtFile" type="file" accept=".srt,.vtt,.json,.txt"><strong>Or upload a transcript</strong> (.srt, .vtt, Whisper .json)</label>
+          <div class="progress" id="trProgress" hidden><i></i></div>
+          <div id="trStatus" class="help"></div>
+        </div>
+        <div class="step">
+          <h4><span class="n">03</span> Cut, style, render</h4>
+          <div class="help">Use Words to drop phrases, Style for the hook and captions, then Render cut. Rendering plays the cut once in real time and saves a video file.</div>
+          <div class="inline">
+            <button id="saveVersion" class="btn">Save as version</button>
+            <button id="exportProject" class="btn">Download project .json</button>
+            <label class="btn" for="importProject">Load project .json<input id="importProject" type="file" accept=".json" hidden></label>
+          </div>
+        </div>
+        <div class="step">
+          <h4><span class="n">04</span> Pro export</h4>
+          <div class="help">Download an FFmpeg script plus caption file for a full-quality MP4 on your computer.</div>
+          <div class="inline"><button id="exportFfmpeg" class="btn">Download render.sh</button><button id="exportSrt" class="btn">Download captions .srt</button></div>
+        </div>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<section class="timeline" aria-label="Timeline">
+  <div class="tl-head">
+    <span class="mono" id="tlSummary">In the cut · 0 clips · ≈0:00</span>
+    <span class="hint">Drag to reorder · click to preview · × to drop</span>
+    <button id="splitBtn" class="btn sm" title="Split the phrase under the playhead">✂ Split</button>
+  </div>
+  <div class="ruler" id="rulerCut"></div>
+  <div class="strip" id="stripCut"><div class="playhead" id="playheadCut" style="left:0"></div></div>
+  <div class="lanes">
+    <div class="name">Hook</div><div class="lane hook" id="laneHook"></div>
+    <div class="name">Captions</div><div class="lane caps" id="laneCaps"></div>
+    <div class="name">Stickers</div><div class="lane stk" id="laneStk"></div>
+  </div>
+  <div class="tl-head"><span class="mono" id="srcSummary">Source · 0:00</span><span class="hint">Click a faded part to add it back</span></div>
+  <div class="source" id="source"><div class="playhead" id="playheadSrc" style="left:0"></div></div>
+  <div class="versions" id="versions"></div>
+</section>
+
+<div id="renderModal" class="modal" hidden>
+  <div class="box">
+    <h3 id="renderTitle">Rendering your cut</h3>
+    <canvas id="renderCanvas" width="1080" height="1920"></canvas>
+    <div class="progress"><i id="renderBar"></i></div>
+    <div id="renderStatus" class="help">Keep this tab in front. It records in real time.</div>
+    <div class="inline"><a id="renderDownload" class="btn primary" hidden download>Download video</a><button id="renderCancel" class="btn">Cancel</button></div>
+  </div>
+</div>
+<div id="toast" class="toast" hidden></div>
+
+<video id="thumbVideo" muted playsinline preload="auto" crossorigin="anonymous" style="position:fixed;left:-9999px;top:-9999px;width:160px"></video>
+
+<script src="app.js"></script>
+</body>
+</html>
