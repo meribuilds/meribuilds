@@ -22,7 +22,7 @@ function text(ctx, s, x, y, px, color, opts = {}) {
 }
 function glass(ctx, x, y, w, h, r, env, alpha = 0.72) {
   ctx.save(); rr(ctx, x, y, w, h, r); ctx.clip();
-  try { ctx.filter = `blur(${18 * env.u}px)`; env.base({ raw: true }); } catch {} ctx.filter = 'none';
+  try { const b = env.blurFrame(18 * env.u); if (b) ctx.drawImage(b.c, b.p, b.p, b.sw, b.sh, 0, 0, env.W, env.H); } catch {}
   ctx.fillStyle = `rgba(255,255,255,${alpha})`; ctx.fillRect(x, y, w, h); ctx.restore();
   ctx.save(); rr(ctx, x, y, w, h, r); ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 2 * env.u; ctx.stroke(); ctx.restore();
 }
@@ -87,7 +87,7 @@ E.paper = (env) => {
   const { ctx, W, H, u, t } = env; ctx.fillStyle = env.col.lilac; ctx.fillRect(0, 0, W, H); const r = rng(5);
   for (let i = 0; i < 9; i++) { const x = r() * W, y = r() * H, s = (60 + r() * 160) * u, col = [env.col.a, env.col.b, '#FDE68A', '#fff', '#A7F3D0'][i % 5]; ctx.save(); ctx.translate(x + Math.sin(t * 1.3 + i) * 18 * u, y + Math.cos(t * 1.1 + i) * 14 * u); ctx.rotate(r() * 6 + t * 0.2); ctx.fillStyle = col; ctx.shadowColor = 'rgba(0,0,0,.18)'; ctx.shadowBlur = 20 * u; ctx.shadowOffsetY = 8 * u; if (i % 3 === 0) { ctx.beginPath(); ctx.arc(0, 0, s / 2, 0, Math.PI * 2); ctx.fill(); } else if (i % 3 === 1) ctx.fillRect(-s / 2, -s / 2, s, s * 0.7); else { ctx.beginPath(); ctx.moveTo(0, -s / 2); ctx.lineTo(s / 2, s / 2); ctx.lineTo(-s / 2, s / 2); ctx.closePath(); ctx.fill(); } ctx.restore(); }
   const c = env.cut(); const s = 0.92 + 0.08 * back(seg(t, 0, 0.5)); const rot = Math.sin(t * 2) * 0.03;
-  if (c) { ctx.save(); ctx.translate(W / 2, H / 2); ctx.rotate(rot); ctx.scale(s, s); ctx.translate(-W / 2, -H / 2); ctx.shadowColor = 'rgba(0,0,0,.25)'; ctx.shadowBlur = 30 * u; ctx.shadowOffsetY = 16 * u; env.drawCut(c, { outline: 14 * u }); ctx.restore(); }
+  if (c) { ctx.save(); ctx.translate(W / 2, H / 2); ctx.rotate(rot); ctx.scale(s, s); ctx.translate(-W / 2, -H / 2); env.drawCut(c, { outline: 14 * u, drop: 16 * u }); ctx.restore(); }
 };
 E.hologram = (env) => {
   const { ctx, W, H, u, t } = env; env.base({}); dim(ctx, W, H, 0.6 * eo(seg(t, 0, 0.3))); const f = env.face(); const c = env.cut(); const a = eo(seg(t, 0.1, 0.6));
@@ -104,7 +104,7 @@ E.escape = (env) => {
   ctx.save(); ctx.translate(W / 2, H / 2); ctx.scale(s, s); ctx.translate(-W / 2, -H / 2); rr(ctx, 0, 0, W, H, 60 * u); ctx.lineWidth = 16 * u; ctx.strokeStyle = '#fff'; ctx.stroke(); ctx.restore();
   const c = env.cut(); if (c) env.drawCut(c, { scale: 1.02 + 0.06 * eo(seg(t, 0.1, 0.9)), anchor: 'bottom' });
 };
-E.dolly = (env) => { const { p } = env; env.base({ scale: 1 + 0.4 * eio(p), filter: `blur(${2 * eio(p) * env.u}px)` }); const c = env.cut(); if (c) env.drawCut(c, { scale: 1 - 0.04 * eio(p), anchor: 'bottom' }); };
+E.dolly = (env) => { const { p } = env; env.base({ scale: 1 + 0.4 * eio(p) }); const c = env.cut(); if (c) env.drawCut(c, { scale: 1 - 0.04 * eio(p), anchor: 'bottom' }); };
 E.floating = (env) => {
   const { ctx, W, H, u, t, words } = env; env.base({}); const a = eo(seg(t, 0, 0.35)) * (t > env.d - 0.25 ? 1 - seg(t, env.d - 0.25, env.d) : 1);
   const w = W * 0.78, h = 240 * u, x = W / 2, y = H * 0.5 + Math.sin(t * 2.2) * 18 * u; const tilt = Math.sin(t * 1.6) * 0.09; const sk = Math.cos(t * 1.6) * 0.12;
@@ -116,7 +116,7 @@ const shards = (() => { const r = rng(11); const pts = []; for (let i = 0; i < 2
 E.shatter = (env) => {
   const { ctx, W, H, u, t } = env; const cx = W * 0.5, cy = H * 0.45;
   if (t < 0.55) { env.base({}); const k = seg(t, 0.25, 0.55); if (k > 0) { ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 3 * u; ctx.shadowColor = '#fff'; ctx.shadowBlur = 8 * u; for (const [px, py] of shards) { ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + (px * W - cx) * k, cy + (py * H - cy) * k); ctx.stroke(); } ctx.restore(); } return; }
-  env.base({ scale: 1.08, filter: 'brightness(1.08)' }); const p = ei(seg(t, 0.55, 1.5)); const still = env.still();
+  env.base({ scale: 1.08 }); const p = ei(seg(t, 0.55, 1.5)); const still = env.still();
   shards.forEach(([px, py, dx, dy, rot], i) => { const n = shards.length; const a = (i / n) * Math.PI * 2, b = ((i + 1) / n) * Math.PI * 2; const R = Math.hypot(W, H); ctx.save(); ctx.globalAlpha = 1 - p * 0.9; ctx.translate(cx + dx * p * W * 0.9, cy + dy * p * H * 0.6 + p * p * H * 0.5); ctx.rotate(rot * p); ctx.translate(-cx, -cy); ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(a) * R, cy + Math.sin(a) * R); ctx.lineTo(cx + Math.cos(b) * R, cy + Math.sin(b) * R); ctx.closePath(); ctx.clip(); if (still) ctx.drawImage(still, 0, 0, W, H); ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 2 * u; ctx.stroke(); ctx.restore(); });
 };
 E.punch = (env) => {
@@ -137,7 +137,7 @@ E.social = (env) => {
 E.particles = (env) => {
   const { ctx, W, H, u, t } = env; env.base({ scale: 1.05, filter: `blur(${10 * u}px) brightness(.7)` }); const c = env.cut(); const gone = t < 1.1 ? ei(seg(t, 0.2, 1.1)) : 1 - eo(seg(t, 1.3, env.d - 0.1));
   if (c) { ctx.save(); ctx.globalAlpha = 1 - gone; env.drawCut(c, { glow: env.col.a, glowBlur: 20 * u * gone }); ctx.restore(); }
-  const f = env.face(); const r = rng(3); ctx.save(); for (let i = 0; i < 260; i++) { const bx = f.x + (r() - 0.5) * f.r * 5, by = f.y + (r() - 0.2) * H * 0.6; const life = r(); const k = c01(gone * 1.4 - life * 0.4); if (k <= 0) continue; const x = bx + Math.sin(i + t * 3) * 20 * u * k, y = by - k * (200 + r() * 400) * u; ctx.globalAlpha = (1 - k) * 0.95; ctx.fillStyle = i % 3 ? env.col.b : '#fff'; ctx.shadowColor = env.col.a; ctx.shadowBlur = 10 * u; ctx.beginPath(); ctx.arc(x, y, (2 + r() * 5) * u, 0, Math.PI * 2); ctx.fill(); } ctx.restore();
+  const f = env.face(); const r = rng(3); ctx.save(); for (let i = 0; i < 260; i++) { const bx = f.x + (r() - 0.5) * f.r * 5, by = f.y + (r() - 0.2) * H * 0.6; const life = r(); const k = c01(gone * 1.4 - life * 0.4); if (k <= 0) continue; const x = bx + Math.sin(i + t * 3) * 20 * u * k, y = by - k * (200 + r() * 400) * u; ctx.globalAlpha = (1 - k) * 0.95; ctx.fillStyle = i % 3 ? env.col.b : '#fff'; ctx.globalCompositeOperation = 'lighter'; ctx.beginPath(); ctx.arc(x, y, (2 + r() * 5) * u, 0, Math.PI * 2); ctx.fill(); } ctx.restore();
 };
 E.liquid = (env) => { const { ctx, W, H, u, t, text: tx } = env; env.base({}); const a = eo(seg(t, 0, 0.4)) * (t > env.d - 0.25 ? 1 - seg(t, env.d - 0.25, env.d) : 1); if (a <= 0) return; const label = tx || 'Claude Worklab'; ctx.save(); ctx.font = `800 ${52 * u}px ${FONT}`; const w = ctx.measureText(label).width + 110 * u; ctx.restore(); const h = 120 * u, x = W / 2 - w / 2, y = H * 0.62 + Math.sin(t * 2.4) * 14 * u; ctx.save(); ctx.globalAlpha = a; ctx.translate(0, (1 - a) * 40 * u); glass(ctx, x, y, w, h, h / 2, env, 0.55); ctx.beginPath(); ctx.arc(x + 48 * u, y + h / 2, 16 * u, 0, Math.PI * 2); ctx.fillStyle = env.col.a; ctx.fill(); text(ctx, label, x + 84 * u, y + h / 2, 52 * u, '#fff', { align: 'left', weight: 800, shadow: 'rgba(0,0,0,.3)' }); ctx.restore(); };
 E.split = (env) => { const { ctx, W, H, u, t } = env; ctx.fillStyle = env.col.ink; ctx.fillRect(0, 0, W, H); for (let i = 0; i < 3; i++) { const p = expo(seg(t, i * 0.12, 0.45 + i * 0.12)); const dir = i % 2 ? 1 : -1; const y = i * H / 3; ctx.save(); ctx.beginPath(); ctx.rect(0, y, W, H / 3); ctx.clip(); ctx.translate(dir * (1 - p) * W + Math.sin(t * 1.5 + i) * 10 * u, 0); env.base({ raw: true, scale: 1.1 + i * 0.08, dy: (1 - i) * H * 0.15 }); ctx.restore(); ctx.fillStyle = '#fff'; ctx.fillRect(0, y - 4 * u, W, 8 * u); } };
@@ -168,7 +168,7 @@ E.comments = (env) => {
 E.slider = (env) => { const { ctx, W, H, u, t } = env; env.base({}); const x = W * (0.08 + 0.84 * eio(seg(t, 0.2, env.d - 0.3))); ctx.save(); ctx.beginPath(); ctx.rect(0, 0, x, H); ctx.clip(); env.base({ raw: true, filter: 'grayscale(1) contrast(1.05)' }); ctx.restore(); ctx.fillStyle = '#fff'; ctx.fillRect(x - 3 * u, 0, 6 * u, H); ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 16 * u; ctx.beginPath(); ctx.arc(x, H / 2, 44 * u, 0, Math.PI * 2); ctx.fill(); ctx.restore(); text(ctx, '◀ ▶', x, H / 2, 28 * u, env.col.ink, { weight: 700 }); const lab = (s, lx, al) => { ctx.save(); ctx.font = `900 ${30 * u}px ${FONT}`; const w = ctx.measureText(s).width + 40 * u; ctx.fillStyle = 'rgba(0,0,0,.6)'; rr(ctx, al === 'left' ? lx : lx - w, H * 0.1, w, 56 * u, 12 * u); ctx.fill(); text(ctx, s, al === 'left' ? lx + 20 * u : lx - 20 * u, H * 0.1 + 28 * u, 30 * u, '#fff', { align: al }); ctx.restore(); }; lab('BEFORE', 40 * u, 'left'); lab('AFTER', W - 40 * u, 'right'); };
 E.neon = (env) => {
   const { ctx, W, H, u, t, words } = env; env.base({}); dim(ctx, W, H, 0.72 * eo(seg(t, 0, 0.3))); const c = env.cut(); if (c) env.drawCut(c, { glow: env.col.a, glowBlur: 50 * u, outline: 3 * u, outlineColor: env.col.b });
-  const draw = (s, y, px, delay) => { const p = seg(t, delay, delay + 0.9); if (p <= 0) return; ctx.save(); ctx.font = `900 ${px}px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round'; ctx.lineWidth = 5 * u; ctx.strokeStyle = env.col.b; ctx.shadowColor = env.col.b; ctx.shadowBlur = 30 * u; const len = ctx.measureText(s).width * 2.6; ctx.setLineDash([len * p, len]); ctx.strokeText(s, W / 2, y); ctx.setLineDash([]); const fp = seg(t, delay + 0.9, delay + 1.2); if (fp > 0) { ctx.globalAlpha = fp; ctx.fillStyle = '#fff'; ctx.shadowColor = '#fff'; ctx.shadowBlur = 20 * u; ctx.fillText(s, W / 2, y); } ctx.restore(); };
+  const draw = (s, y, px, delay) => { const p = seg(t, delay, delay + 0.9); if (p <= 0) return; ctx.save(); ctx.font = `900 ${px}px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round'; const len = ctx.measureText(s).width * 2.6; ctx.setLineDash([len * p, len]); ctx.strokeStyle = env.col.b; ctx.globalAlpha = 0.28; ctx.lineWidth = 22 * u; ctx.strokeText(s, W / 2, y); ctx.globalAlpha = 0.5; ctx.lineWidth = 11 * u; ctx.strokeText(s, W / 2, y); ctx.globalAlpha = 1; ctx.lineWidth = 5 * u; ctx.strokeText(s, W / 2, y); ctx.setLineDash([]); const fp = seg(t, delay + 0.9, delay + 1.2); if (fp > 0) { ctx.globalAlpha = fp; ctx.fillStyle = '#fff'; ctx.fillText(s, W / 2, y); } ctx.restore(); };
   draw(words[0], H * 0.18, Math.min(190 * u, (W * 0.9) / Math.max(1, words[0].length) * 1.65), 0.2); draw(words[1], H * 0.85, Math.min(96 * u, (W * 0.9) / Math.max(1, words[1].length) * 1.65), 0.5);
 };
 E.freeze = (env) => {

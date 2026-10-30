@@ -27,5 +27,6 @@
   };
   const out = async () => { await sb.auth.signOut(); location.reload(); };
   $('studioOut').onclick = out; $('gateOut').onclick = out;
-  check().catch((err) => show(err.message));
+  const slow = setTimeout(() => { if (!gate.hidden && /Checking/.test(msg.textContent)) show('The sign-in service is slow to answer. Sign in below, or reload in a moment.'); }, 12000);
+  check().catch((err) => show(err.message)).finally(() => clearTimeout(slow));
 })();
