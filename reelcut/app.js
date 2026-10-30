@@ -436,7 +436,7 @@ function drawFrame(ctx, W, H, ct) {
     lines.forEach((ln, li) => {
       const total = ln.reduce((a, i) => a + widths[i], 0) + gap * (ln.length - 1); let x = x0 - total / 2; const y = y0 + li * lh;
       for (const i of ln) {
-        const on = i === cur; ctx.fillStyle = on ? (tpl === 'abie2' ? '#EE9FB9' : tpl === 'yellow' ? '#FFD43B' : '#fff') : '#fff';
+        const on = i === cur; ctx.fillStyle = on ? (tpl === 'abie2' ? '#E8C2C4' : tpl === 'yellow' ? '#FFD43B' : '#fff') : '#fff';
         ctx.save(); if (on && tpl !== 'box') { ctx.translate(x + widths[i] / 2, y); ctx.scale(1.12, 1.12); ctx.translate(-(x + widths[i] / 2), -y); }
         ctx.textAlign = 'left'; ctx.fillText(words[i], x, y); ctx.restore(); x += widths[i] + gap;
       }
@@ -487,7 +487,7 @@ function download(name, text, type = 'text/plain') { const a = document.createEl
 const assT = (s) => { const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), sec = (s % 60).toFixed(2).padStart(5, '0'); return `${h}:${String(m).padStart(2, '0')}:${sec}`; };
 const srtT = (s) => { const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), sec = Math.floor(s % 60), ms = Math.round((s % 1) * 1000); return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')},${String(ms).padStart(3, '0')}`; };
 function buildAss(W, H) {
-  const esc = (t) => t.replace(/[{}]/g, ''); const u = W / 340; const cap = state.captions; const hk = state.hook; const hl = { abie2: '&HB99FEE&', yellow: '&H3BD4FF&', box: '&HFFFFFF&' }[cap.template];
+  const esc = (t) => t.replace(/[{}]/g, ''); const u = W / 340; const cap = state.captions; const hk = state.hook; const hl = { abie2: '&HC4C2E8&', yellow: '&H3BD4FF&', box: '&HFFFFFF&' }[cap.template];
   let s = `[Script Info]\nScriptType: v4.00+\nPlayResX: ${W}\nPlayResY: ${H}\nWrapStyle: 0\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\n`;
   s += `Style: Cap,Nunito,${Math.round((cap.template === 'box' ? 16 : 19) * cap.size * u * 1.25)},&H00FFFFFF,&H00FFFFFF,&H00000000,&H90000000,-1,0,0,0,100,100,0,0,${cap.template === 'box' ? 3 : 1},${cap.template === 'box' ? 10 : 2},${cap.template === 'box' ? 0 : 2},5,20,20,20,1\n`;
   s += `Style: HookSmall,Fredoka,${Math.round(15 * hk.size * u * 1.25)},&H00FFFFFF,&H00FFFFFF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,2,2,5,20,20,20,1\n`;
@@ -584,7 +584,8 @@ document.addEventListener('keydown', (e) => { if (e.target.matches('input, texta
 let toastTimer = 0; function toast(t) { const n = $('toast'); n.textContent = t; n.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => n.hidden = true, 2600); }
 
 /* ---------- boot ---------- */
-try { setTheme(localStorage.getItem('reelcut:theme') || ''); $('apiKey').value = localStorage.getItem('reelcut:key') || ''; } catch {}
+const EMBED = /[?&]embed=1/.test(location.search); if (EMBED) document.body.classList.add('embed');
+try { setTheme(EMBED ? 'light' : (localStorage.getItem('reelcut:theme') || '')); $('apiKey').value = localStorage.getItem('reelcut:key') || ''; } catch {}
 syncControls(); afterChange(true);
 // expose a tiny API for tests and demos
 window.reelcut = { get state() { return state; }, loadVideo, setTranscript, parseTranscript, computeSegments, get segments() { return segments; }, get chunks() { return chunks; }, buildAss, seekCut, play, pause, commit };
