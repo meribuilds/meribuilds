@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Meri Cuts · reel cutter</title>
-<meta name="description" content="Cut a vlog by its transcript, add a hook and captions, preview it in a phone frame, render it in the browser.">
+<meta name="description" content="Cut a vlog by its transcript, add a hook, captions, effects, music and sound, preview it in a phone frame, render it in the browser.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Nunito+Sans:wght@400;600;700;800&family=Fredoka:wght@500;700&family=Nunito:wght@700;800;900&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Nunito+Sans:wght@400;600;700;800&family=Fredoka:wght@500;700&family=Nunito:wght@700;800;900&family=Poppins:wght@700;800;900&display=swap">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -48,7 +48,8 @@
     <div class="stage">
       <div class="phone" id="phone">
         <div class="screen">
-          <video id="video" playsinline preload="auto" crossorigin="anonymous"></video>
+          <video id="video" playsinline preload="auto" crossorigin="anonymous" class="srcvideo"></video>
+          <canvas id="pv" width="540" height="960"></canvas>
           <div class="empty" id="emptyState"><div><b>Drop a vlog here</b>or use Workflow → Add video. Nothing leaves your browser.</div></div>
           <div class="overlay" id="overlay">
             <div class="hook abie" id="hookEl" hidden><div class="small"></div><div class="big"></div><div class="sub"></div></div>
@@ -60,7 +61,7 @@
             <div class="top"><span>9:41</span><span>▮▮▮ ◉</span></div>
             <div class="reels">Reels ⌄</div>
             <div class="rail"><div><i class="heart"></i>12.4K</div><div><i></i>318</div><div><i class="send"></i>1.2K</div><div><i></i></div></div>
-            <div class="meta"><div class="user"><span id="igUser">yourhandle</span><em>Follow</em></div><div id="igCaption">first client pitch in Valencia ~ what I learned</div><div>♫ Original audio</div></div>
+            <div class="meta"><div class="user"><span id="igUser">meri.builds</span><em>Follow</em></div><div id="igCaption">how I run my week with AI ~ no jargon</div><div>♫ Original audio</div></div>
             <div class="bar"><i></i><i></i><i></i><i></i><i></i></div>
           </div>
         </div>
@@ -71,12 +72,15 @@
       <button id="restartBtn" class="btn sm">⟲ Start</button>
       <span class="time"><span id="tCur">0:00.0</span> / <span id="tTotal">0:00.0</span></span>
       <label class="switch" style="margin-left:8px"><input id="muteChk" type="checkbox"><span class="help">mute preview</span></label>
+      <button id="coverBtn" class="btn sm" title="Save this frame as a cover image">⤓ Cover</button>
     </div>
   </section>
 
   <aside class="panel">
     <div class="tabs" role="tablist">
       <button role="tab" aria-selected="true" data-tab="style">Style</button>
+      <button role="tab" aria-selected="false" data-tab="effects">Effects</button>
+      <button role="tab" aria-selected="false" data-tab="audio">Audio</button>
       <button role="tab" aria-selected="false" data-tab="stickers">Stickers</button>
       <button role="tab" aria-selected="false" data-tab="words">Words</button>
       <button role="tab" aria-selected="false" data-tab="workflow">Workflow</button>
@@ -89,9 +93,9 @@
         <div class="row"><label for="hookOn">Hook</label><label class="switch"><input id="hookOn" type="checkbox" checked><span>Big title at the start</span></label></div>
         <div class="row"><label for="hookStyle">Hook style</label><select id="hookStyle"><option value="abie">Bubbly hook</option><option value="editorial">Editorial hook</option><option value="clean">Clean label</option></select></div>
         <div class="row"><label for="hookShow">Show hook</label><select id="hookShow"><option value="whole">The whole video</option><option value="3">First 3 seconds</option><option value="5">First 5 seconds</option><option value="first">During the first clip</option></select></div>
-        <div class="row"><label for="hookSmall">Small line</label><input id="hookSmall" type="text" placeholder="pitching to my"></div>
-        <div class="row"><label for="hookBig">Big line</label><input id="hookBig" type="text" placeholder="first client"></div>
-        <div class="row"><label for="hookSub">Subtitle</label><input id="hookSub" type="text" placeholder="Editorial hook only, e.g. how i scored it"></div>
+        <div class="row"><label for="hookSmall">Small line</label><input id="hookSmall" type="text" placeholder="how i use AI"></div>
+        <div class="row"><label for="hookBig">Big line</label><input id="hookBig" type="text" placeholder="to save 10 hours"></div>
+        <div class="row"><label for="hookSub">Subtitle</label><input id="hookSub" type="text" placeholder="Editorial hook only, e.g. the 3 prompts i use daily"></div>
         <div class="row"><label for="hookSize">Size</label><input id="hookSize" type="range" min="0.6" max="1.6" step="0.05" value="1"></div>
         <p class="help">Leave lines blank to use your first sentence. Captions start after a timed hook.</p>
       </div>
@@ -104,9 +108,64 @@
         <div class="row"><label for="capCase">Case</label><select id="capCase"><option value="as-is">As spoken</option><option value="upper">UPPERCASE</option><option value="lower">lowercase</option></select></div>
       </div>
       <div class="group">
+        <h3>Look</h3>
+        <div class="row"><label for="gradeSel">Colour grade</label><select id="gradeSel"><option value="none">As shot</option><option value="warm">Warm and bright</option><option value="bright">Bright</option><option value="film">Film</option><option value="pop">Pop</option><option value="cool">Cool</option><option value="mono">Black and white</option></select></div>
+        <div class="row"><label for="ratioSel">Output</label><select id="ratioSel"><option value="9:16">9:16 Reels, TikTok, Shorts</option><option value="4:5">4:5 Instagram feed</option><option value="1:1">1:1 Square</option><option value="16:9">16:9 YouTube</option></select></div>
+        <div class="row"><label for="progressOn">Progress bar</label><label class="switch"><input id="progressOn" type="checkbox"><span>Thin bar along the bottom</span></label></div>
+        <div class="row"><label for="fxAccent">Effect colours</label><select id="fxAccent"><option value="purple">Purple and magenta</option><option value="blush">Blush and rose</option><option value="udream">Udream yellow and maroon</option></select></div>
+      </div>
+      <div class="group">
+        <h3>End card</h3>
+        <div class="row"><label for="endOn">End card</label><label class="switch"><input id="endOn" type="checkbox"><span>Card after the last clip</span></label></div>
+        <div class="row"><label for="endStyle">Style</label><select id="endStyle"><option value="brand">Brand colour</option><option value="blur">Blurred last frame</option></select></div>
+        <div class="row"><label for="endTitle">Title</label><input id="endTitle" type="text" placeholder="follow for more AI workflows"></div>
+        <div class="row"><label for="endSub">Line two</label><input id="endSub" type="text" placeholder="@meri.builds"></div>
+        <div class="row"><label for="endDur">Seconds</label><input id="endDur" type="range" min="1" max="6" step="0.5" value="2.5"></div>
+      </div>
+      <div class="group">
         <h3>Instagram preview</h3>
-        <div class="row"><label for="igUserIn">Handle</label><input id="igUserIn" type="text" value="yourhandle"></div>
-        <div class="row"><label for="igCapIn">Post caption</label><input id="igCapIn" type="text" value="first client pitch in Valencia ~ what I learned"></div>
+        <div class="row"><label for="igUserIn">Handle</label><input id="igUserIn" type="text" value="meri.builds"></div>
+        <div class="row"><label for="igCapIn">Post caption</label><input id="igCapIn" type="text" value="how I run my week with AI ~ no jargon"></div>
+      </div>
+    </div>
+
+    <div class="tab" data-tab="effects" hidden>
+      <div class="note">Pick an effect, it lands at the playhead. Each runs about 2 seconds. Cutout effects find you in the frame automatically.</div>
+      <div class="group">
+        <h3>On the cut</h3>
+        <div id="fxCues" class="cards"></div>
+      </div>
+      <div class="group">
+        <h3>Menu</h3>
+        <div class="inline"><input id="fxSearch" type="search" placeholder="Search effects, e.g. punch" aria-label="Search effects" style="flex:1;min-width:0"></div>
+        <div id="fxMenu" class="fxmenu"></div>
+      </div>
+    </div>
+
+    <div class="tab" data-tab="audio" hidden>
+      <div class="note">Your voice stays as recorded. Music ducks under it, sound effects follow the effects.</div>
+      <div class="group">
+        <h3>Background music</h3>
+        <div class="row"><label for="musicMode">Music</label><select id="musicMode"><option value="none">None</option><option value="generated">Generate a track</option><option value="file">Use my own file</option></select></div>
+        <div id="musicGen">
+          <div class="row"><label for="musicMood">Mood</label><select id="musicMood"><option value="chill">Chill</option><option value="upbeat">Upbeat</option><option value="dreamy">Dreamy</option><option value="lofi">Lo-fi</option></select></div>
+          <div class="row"><label for="musicBpm">Tempo</label><input id="musicBpm" type="range" min="70" max="130" step="1" value="96"></div>
+          <div class="inline"><button id="musicRegen" class="btn sm">↻ New variation</button><button id="musicWav" class="btn sm">⤓ Download .wav</button><span id="musicInfo" class="help"></span></div>
+        </div>
+        <div id="musicFileRow" hidden><label class="drop" id="musicDrop"><input id="musicFile" type="file" accept="audio/*"><strong>Choose an audio file</strong> (mp3, m4a, wav)</label><div id="musicFileInfo" class="help"></div></div>
+        <div class="row"><label for="musicVol">Level</label><input id="musicVol" type="range" min="0" max="1" step="0.02" value="0.22"></div>
+        <div class="row"><label for="musicDuck">Ducking</label><label class="switch"><input id="musicDuck" type="checkbox" checked><span>Quieter while you talk, louder on the end card</span></label></div>
+      </div>
+      <div class="group">
+        <h3>Sound effects</h3>
+        <div class="row"><label for="sfxOn">Effects audio</label><label class="switch"><input id="sfxOn" type="checkbox" checked><span>Whooshes, pops and hits on effects</span></label></div>
+        <div class="row"><label for="sfxVol">Level</label><input id="sfxVol" type="range" min="0" max="1" step="0.02" value="0.6"></div>
+        <div class="inline" id="sfxTry"></div>
+        <p class="help">Add a sound on its own from the Effects menu ("Sound only").</p>
+      </div>
+      <div class="group">
+        <h3>Voice</h3>
+        <div class="row"><label for="voiceVol">Level</label><input id="voiceVol" type="range" min="0" max="2" step="0.05" value="1"></div>
       </div>
     </div>
 
@@ -118,6 +177,8 @@
         <div class="row"><label for="stkImg">Image</label><input id="stkImg" type="file" accept="image/*"></div>
         <div class="row"><label for="stkStart">Show from</label><input id="stkStart" type="number" min="0" step="0.1" value="0"> </div>
         <div class="row"><label for="stkEnd">Until</label><input id="stkEnd" type="number" min="0" step="0.1" value="3"></div>
+        <div class="row"><label for="stkSize">Size</label><input id="stkSize" type="range" min="0.4" max="4" step="0.1" value="1"></div>
+        <div class="row"><label for="stkAnim">Motion</label><select id="stkAnim"><option value="none">Still</option><option value="pop">Pop in</option><option value="float">Float</option><option value="kenburns">Slow zoom (for photos)</option></select></div>
         <div class="inline"><button id="stkAdd" class="btn primary">Add sticker</button><span class="help">times are in cut seconds</span></div>
       </div>
       <div class="group"><h3>On the cut</h3><div id="stkList" class="cards"></div></div>
@@ -125,11 +186,13 @@
 
     <div class="tab" data-tab="words" hidden>
       <div class="cards-head"><h2>In the cut</h2><span class="mono" id="cutSummary">0 phrases · ≈0s</span></div>
-      <p class="help">Tick a phrase to keep it. Click a word to cut it out. Arrows reorder. Rotate fixes clips shot upside down.</p>
+      <p class="help">Tick a phrase to keep it. Click a word to cut it out. Arrows reorder. Rotate fixes clips shot upside down. Zoom punches in. Transition plays going into that clip.</p>
       <div class="inline">
         <button id="keepAll" class="btn sm">Keep all</button>
         <button id="dropAll" class="btn sm">Drop all</button>
         <button id="dropFillers" class="btn sm">Cut filler words</button>
+        <button id="autoZoom" class="btn sm">Alternate zoom</button>
+        <button id="autoTrans" class="btn sm">Dissolve all cuts</button>
       </div>
       <div id="cards" class="cards"><div class="empty-cards">Add a video and a transcript in Workflow to see phrases here.</div></div>
     </div>
@@ -153,7 +216,7 @@
         </div>
         <div class="step">
           <h4><span class="n">03</span> Cut, style, render</h4>
-          <div class="help">Use Words to drop phrases, Style for the hook and captions, then Render cut. Rendering plays the cut once in real time and saves a video file.</div>
+          <div class="help">Words to drop phrases, Style for hook and captions, Effects and Audio for the fun part, then Render cut. Rendering plays the cut once in real time and saves a video file.</div>
           <div class="inline">
             <button id="saveVersion" class="btn">Save as version</button>
             <button id="exportProject" class="btn">Download project .json</button>
@@ -162,7 +225,7 @@
         </div>
         <div class="step">
           <h4><span class="n">04</span> Pro export</h4>
-          <div class="help">Download an FFmpeg script plus caption file for a full-quality MP4 on your computer.</div>
+          <div class="help">An FFmpeg script plus caption file for a full-quality MP4 on your computer. Covers the cut, zooms, grade, hook and captions. Effects, transitions, music and the end card are browser-render only.</div>
           <div class="inline"><button id="exportFfmpeg" class="btn">Download render.sh</button><button id="exportSrt" class="btn">Download captions .srt</button></div>
         </div>
       </div>
@@ -173,7 +236,7 @@
 <section class="timeline" aria-label="Timeline">
   <div class="tl-head">
     <span class="mono" id="tlSummary">In the cut · 0 clips · ≈0:00</span>
-    <span class="hint">Drag to reorder · click to preview · × to drop</span>
+    <span class="hint">Drag to reorder · drag edges to trim · click to preview · × to drop</span>
     <button id="splitBtn" class="btn sm" title="Split the phrase under the playhead">✂ Split</button>
   </div>
   <div class="ruler" id="rulerCut"></div>
@@ -181,7 +244,9 @@
   <div class="lanes">
     <div class="name">Hook</div><div class="lane hook" id="laneHook"></div>
     <div class="name">Captions</div><div class="lane caps" id="laneCaps"></div>
+    <div class="name">Effects</div><div class="lane fx" id="laneFx"></div>
     <div class="name">Stickers</div><div class="lane stk" id="laneStk"></div>
+    <div class="name">Music</div><div class="lane music" id="laneMusic"></div>
   </div>
   <div class="tl-head"><span class="mono" id="srcSummary">Source · 0:00</span><span class="hint">Click a faded part to add it back</span></div>
   <div class="source" id="source"><div class="playhead" id="playheadSrc" style="left:0"></div></div>
@@ -201,6 +266,7 @@
 
 <video id="thumbVideo" muted playsinline preload="auto" crossorigin="anonymous" style="position:fixed;left:-9999px;top:-9999px;width:160px"></video>
 
+<script src="fx.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
