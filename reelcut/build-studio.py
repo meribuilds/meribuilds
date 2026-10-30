@@ -49,5 +49,10 @@ rep('<script src="fx.js"></script>',
     '<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>\n'
     f'<script>window.STUDIO_AUTH = {{ url: "{SUPABASE_URL}", key: "{SUPABASE_KEY}" }};</script>\n'
     '<script src="gate.js"></script>\n<script src="fx.js"></script>')
+import hashlib
+for f in ["styles.css", "app.js", "fx.js", "gate.js"]:
+    v = hashlib.sha1((src / f).read_bytes()).hexdigest()[:8]
+    for tag in (f'src="{f}"', f'href="{f}"'):
+        h = h.replace(tag, tag[:-1] + f'?v={v}"')
 (out / "index.html").write_text(h)
 print("studio built at", out)

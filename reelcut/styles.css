@@ -303,3 +303,6 @@ body.locked { overflow: hidden; }
 
 .screen:has(.empty:not([hidden])) .ig, .screen:has(.empty:not([hidden])) .safe { display: none; }
 .phone .empty .btn { margin: 4px 0; }
+
+.phone .empty { cursor: pointer; }
+.phone .empty #pickVideo { display: inline-flex; margin: 10px 0 8px; }

@@ -43,6 +43,7 @@
       <button id="igToggle" class="toggle" aria-pressed="true">Instagram UI</button>
       <button id="safeToggle" class="toggle" aria-pressed="false">Safe zones</button>
       <span class="spacer"></span>
+      <button id="addVideoBtn" class="btn sm" type="button">＋ Add video</button>
       <span id="fileLabel" class="file-label">no video yet</span>
     </div>
     <div class="stage">
@@ -50,7 +51,7 @@
         <div class="screen">
           <video id="video" playsinline preload="auto" crossorigin="anonymous" class="srcvideo"></video>
           <canvas id="pv" width="540" height="960"></canvas>
-          <div class="empty" id="emptyState"><div><b>Drop a vlog here</b>or use Workflow → Add video. Nothing leaves your browser.</div></div>
+          <div class="empty" id="emptyState"><div><b>Add your video</b><button class="btn primary" id="pickVideo" type="button">Choose a video</button><br>or drag an MP4 or MOV onto this phone. Nothing leaves your computer.</div></div>
           <div class="overlay" id="overlay">
             <div class="hook abie" id="hookEl" hidden><div class="small"></div><div class="big"></div><div class="sub"></div></div>
             <div class="cap abie2" id="capEl" hidden></div>
