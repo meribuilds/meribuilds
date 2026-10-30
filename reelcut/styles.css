@@ -300,3 +300,6 @@ body.locked { overflow: hidden; }
 #fxSearch { border: 1px solid var(--line); background: var(--surface-2); border-radius: 12px; padding: 9px 12px; }
 @media (max-width: 1500px) { #studioWho { display: none; } }
 @media (max-width: 1280px) { .topbar .seg[aria-label="Theme"] { display: none; } }
+
+.screen:has(.empty:not([hidden])) .ig, .screen:has(.empty:not([hidden])) .safe { display: none; }
+.phone .empty .btn { margin: 4px 0; }

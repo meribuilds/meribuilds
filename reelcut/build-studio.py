@@ -13,7 +13,7 @@ SUPABASE_KEY = "sb_publishable_ClDpIJd5lq8FBFAFVR9I-A__D4ILLNd"  # publishable (
 src = pathlib.Path(__file__).resolve().parent
 out = pathlib.Path(sys.argv[1]).resolve()
 out.mkdir(parents=True, exist_ok=True)
-for f in ["styles.css", "app.js", "fx.js", "whisper-worker.js", "gate.js"]:
+for f in ["styles.css", "app.js", "fx.js", "whisper-worker.js", "gate.js", "convert-worker.js"]:
     shutil.copy(src / f, out / f)
 
 h = (src / "index.html").read_text()

@@ -134,12 +134,53 @@ function setBusy(b) { for (const id of ['transcribeApi', 'transcribeLocal']) $(i
 /* ---------- video loading + filmstrip ---------- */
 const video = $('video'), tv = $('thumbVideo');
 for (const ev of ['seeked', 'loadeddata', 'canplay']) video.addEventListener(ev, () => { dirty = true; });
+const VIDEO_EXT = /\.(mp4|m4v|mov|qt|hevc|heic|mkv|webm|avi|3gp|mts|m2ts)$/i, AUDIO_EXT = /\.(mp3|m4a|wav|aac|ogg|oga|flac|opus)$/i;
+const isVideoFile = (f) => !!f && ((f.type || '').startsWith('video/') || VIDEO_EXT.test(f.name || ''));
+const isAudioFile = (f) => !!f && ((f.type || '').startsWith('audio/') || AUDIO_EXT.test(f.name || ''));
+function phoneMessage(html) { const n = $('emptyState'); n.hidden = false; n.innerHTML = '<div>' + html + '</div>'; return n; }
+const escHtml = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+// waits for the browser to open the file; a video it cannot decode (often iPhone HEVC) opens with no picture
+function probeVideo() {
+  return new Promise((res) => {
+    let done = false; const finish = (r) => { if (done) return; done = true; clearTimeout(t); video.removeEventListener('loadedmetadata', onMeta); video.removeEventListener('error', onErr); res(r); };
+    const onErr = () => finish({ ok: false, why: 'error', code: video.error && video.error.code });
+    const onMeta = () => { if (!video.videoWidth || !video.videoHeight) { setTimeout(() => finish(video.videoWidth ? { ok: true } : { ok: false, why: 'nopicture' }), 600); } else finish({ ok: true }); };
+    const t = setTimeout(() => finish({ ok: false, why: 'timeout' }), 20000);
+    video.addEventListener('loadedmetadata', onMeta); video.addEventListener('error', onErr);
+  });
+}
+function showUnplayable(file, r) {
+  const big = file.size > 1.2e9; const mb = Math.round(file.size / 1e6);
+  const why = r.why === 'timeout' ? 'The browser could not open this file.' : 'This browser can open the file but cannot show its picture.';
+  phoneMessage(`<b>This video won't play here</b>${why} Phone videos are usually saved as HEVC, which many browsers can't play.<br><br>
+    <button class="btn primary sm" id="convertBtn" type="button"${big ? ' disabled' : ''}>Convert to MP4 here</button><br><span class="help" style="color:#d9c6bd">${big ? `This file is ${mb} MB, too big to convert in the browser.` : `${isFinite(video.duration) && video.duration > 0 ? `Usually takes about ${Math.max(1, Math.round(video.duration * 1.2 / 60))} min for this ${fmt(video.duration, false)} video.` : 'Usually takes about as long as the video.'} Nothing is uploaded.`}</span><br><br>
+    <span style="font-size:12px">Other fixes: open the Studio in Safari or Chrome on a Mac, or on your iPhone set Settings, Camera, Formats to Most Compatible before you film.</span>`);
+  $('videoInfo').textContent = `${file.name} · ${mb} MB · won't play in this browser. Use Convert to MP4 on the phone preview.`;
+  const b = $('convertBtn'); if (b) b.onclick = () => convertVideo(file);
+  toast("This video won't play in this browser. Convert it, or see the tips on the preview.");
+}
+let convertWorker = null;
+function convertVideo(file) {
+  if (convertWorker) convertWorker.terminate(); convertWorker = new Worker('convert-worker.js');
+  const n = phoneMessage(`<b>Converting ${escHtml(file.name)}</b><span id="convText">Starting…</span><div class="progress" style="margin:12px 0"><i id="convBar"></i></div><button class="btn sm" id="convCancel" type="button">Cancel</button>`); void n;
+  $('convCancel').onclick = () => { convertWorker.terminate(); convertWorker = null; showUnplayable(file, { why: 'nopicture' }); };
+  convertWorker.onmessage = (ev) => { const m = ev.data;
+    if (m.type === 'progress') { const t = $('convText'); if (t) t.textContent = m.text; if (m.pct != null && $('convBar')) $('convBar').style.width = m.pct + '%'; }
+    else if (m.type === 'done') { convertWorker.terminate(); convertWorker = null; const out = new File([m.data], file.name.replace(/\.[^.]+$/, '') + '-mp4.mp4', { type: 'video/mp4' }); toast(`Converted in ${Math.round(m.seconds)} s`); media.converted = out; loadVideo(out); }
+    else if (m.type === 'error') { convertWorker.terminate(); convertWorker = null; phoneMessage(`<b>Conversion failed</b>${escHtml(m.message).slice(0, 220)}<br><br><span style="font-size:12px">Try Safari or Chrome on a Mac, or set your iPhone camera to Most Compatible.</span>`); } };
+  convertWorker.onerror = (e) => { phoneMessage(`<b>Conversion failed</b>${escHtml(e.message || 'The converter did not load. Check your connection and try again.')}`); };
+  convertWorker.postMessage({ file, duration: isFinite(video.duration) ? video.duration : 0, base: window.REELCUT_FFMPEG_BASE || undefined });
+}
 async function loadVideo(file) {
-  if (!file) return; if (media.url) URL.revokeObjectURL(media.url);
-  media.file = file; media.url = URL.createObjectURL(file); video.src = media.url; tv.src = media.url; $('fileLabel').textContent = file.name; $('emptyState').hidden = true;
-  await new Promise((res) => { video.onloadedmetadata = res; video.onerror = res; });
+  if (!file) return; if (!isVideoFile(file)) { toast(`${file.name} doesn't look like a video. Use MP4 or MOV.`); return; }
+  if (media.url) URL.revokeObjectURL(media.url); pause();
+  media.file = file; media.url = URL.createObjectURL(file); $('fileLabel').textContent = file.name; phoneMessage(`<b>Opening ${escHtml(file.name)}…</b>`); $('videoInfo').textContent = 'Opening ' + file.name + '…';
+  const probe = probeVideo(); video.src = media.url; video.load();
+  const r = await probe; if (!r.ok) { media.url = null; media.w = media.h = 0; showUnplayable(file, r); return; }
+  tv.src = media.url; $('emptyState').hidden = true;
   media.duration = video.duration || 0; media.w = video.videoWidth; media.h = video.videoHeight;
   $('videoInfo').textContent = `${file.name} · ${fmt(media.duration)} · ${media.w}×${media.h}`;
+  if (media.converted === file) { const a = document.createElement('a'); a.textContent = ' · Save the converted copy'; a.href = media.url; a.download = file.name; a.className = 'navlink'; $('videoInfo').appendChild(a); }
   const saved = loadProject(); state.name = saved ? state.name : file.name.replace(/\.[^.]+$/, ''); $('projectName').value = state.name;
   afterChange(true); buildFilmstrip(); if (state.music.mode === 'generated') ensureMusic();
 }
@@ -631,10 +672,10 @@ $('autoZoom').onclick = () => { let i = 0; for (const id of state.order) { const
 $('autoTrans').onclick = () => { const all = state.phrases.every((p) => p.transition === 'dissolve'); state.phrases.forEach((p) => p.transition = all ? 'cut' : 'dissolve'); commit(); toast(all ? 'Back to hard cuts' : 'Dissolve on every cut'); };
 $('saveVersion').onclick = saveVersion; $('exportProject').onclick = () => download((state.name || 'reel') + '.reelcut.json', cleanState(), 'application/json');
 $('importProject').onchange = async (e) => { const f = e.target.files[0]; if (!f) return; try { history.undo.push(snapshot()); state = mergeState(JSON.parse(await f.text())); afterChange(true); toast('Project loaded'); } catch { toast('That file is not a reelcut project'); } e.target.value = ''; };
-$('exportFfmpeg').onclick = exportFfmpeg; $('exportSrt').onclick = exportSrt; $('transcribeApi').onclick = transcribeViaApi; $('transcribeLocal').onclick = transcribeLocal; $('videoFile').onchange = (e) => loadVideo(e.target.files[0]);
+$('exportFfmpeg').onclick = exportFfmpeg; $('exportSrt').onclick = exportSrt; $('transcribeApi').onclick = transcribeViaApi; $('transcribeLocal').onclick = transcribeLocal; $('videoFile').onchange = (e) => { const f = e.target.files[0]; e.target.value = ''; if (f) loadVideo(f); };
 $('srtFile').onchange = async (e) => { const f = e.target.files[0]; if (!f) return; try { setTranscript(parseTranscript(await f.text(), f.name)); trStatus(`Loaded ${state.words.length} words from ${f.name}`); } catch (err) { trStatus('Could not read that transcript: ' + err.message); } e.target.value = ''; };
 for (const [dropId, inputId] of [['videoDrop', 'videoFile'], ['srtDrop', 'srtFile'], ['musicDrop', 'musicFile']]) { const d = $(dropId); d.ondragover = (e) => { e.preventDefault(); d.classList.add('drag'); }; d.ondragleave = () => d.classList.remove('drag'); d.ondrop = (e) => { e.preventDefault(); d.classList.remove('drag'); const f = e.dataTransfer.files[0]; if (!f) return; if (inputId === 'videoFile') loadVideo(f); else { const dt = new DataTransfer(); dt.items.add(f); $(inputId).files = dt.files; $(inputId).dispatchEvent(new Event('change')); } }; }
-const phone = $('phone'); phone.addEventListener('dragover', (e) => { e.preventDefault(); $('emptyState').classList.add('drag'); }); phone.addEventListener('dragleave', () => $('emptyState').classList.remove('drag')); phone.addEventListener('drop', (e) => { e.preventDefault(); $('emptyState').classList.remove('drag'); const f = e.dataTransfer.files[0]; if (!f) return; if (f.type.startsWith('video/')) loadVideo(f); else if (f.type.startsWith('audio/')) loadMusicFile(f); else { const dt = new DataTransfer(); dt.items.add(f); $('srtFile').files = dt.files; $('srtFile').dispatchEvent(new Event('change')); } });
+const phone = $('phone'); phone.addEventListener('dragover', (e) => { e.preventDefault(); $('emptyState').classList.add('drag'); }); phone.addEventListener('dragleave', () => $('emptyState').classList.remove('drag')); phone.addEventListener('drop', (e) => { e.preventDefault(); $('emptyState').classList.remove('drag'); const f = e.dataTransfer.files[0]; if (!f) return; if (isVideoFile(f)) loadVideo(f); else if (isAudioFile(f)) loadMusicFile(f).catch(() => toast('Could not read that audio file')); else { const dt = new DataTransfer(); dt.items.add(f); $('srtFile').files = dt.files; $('srtFile').dispatchEvent(new Event('change')); } });
 pv.addEventListener('click', () => (engine.playing ? pause() : play()));
 document.querySelectorAll('.tabs [role="tab"]').forEach((b) => b.onclick = () => setTab(b.dataset.tab));
 function setTab(name) { document.querySelectorAll('.tabs [role="tab"]').forEach((b) => b.setAttribute('aria-selected', b.dataset.tab === name)); document.querySelectorAll('.tab').forEach((t) => t.hidden = t.dataset.tab !== name); }
